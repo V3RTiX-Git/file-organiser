@@ -50,7 +50,9 @@ http://127.0.0.1:5000
 
 ## 📸 Preview
 
-<!-- Add your screenshot here after uploading to GitHub -->
+![Preview](screenshots/UI Landing.png)
+
+![Result](screenshots/UI Result.png)
 
 ## ⚠️ Note
 
