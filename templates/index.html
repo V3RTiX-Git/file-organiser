@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>File Organiser</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 0.4rem; color: #f8fafc; }
+    p.subtitle { color: #94a3b8; margin-bottom: 2rem; font-size: 0.95rem; }
+    label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8; }
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 0.95rem;
+      margin-bottom: 1.2rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus { border-color: #6366f1; }
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #4f46e5; }
+    button:disabled { background: #334155; cursor: not-allowed; }
+    #results { margin-top: 2rem; }
+    .error { color: #f87171; background: #450a0a; padding: 0.8rem 1rem; border-radius: 8px; }
+    .category {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+    .category h3 { font-size: 0.95rem; color: #818cf8; margin-bottom: 0.5rem; }
+    .category ul { list-style: none; padding: 0; }
+    .category ul li {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      padding: 0.2rem 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .category ul li:last-child { border-bottom: none; }
+    .summary {
+      font-size: 0.9rem;
+      color: #4ade80;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    .skipped { color: #fbbf24; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🗂 File Organiser</h1>
+    <p class="subtitle">Paste a folder path below and let the tool sort your files automatically.</p>
+
+    <label for="folderPath">Folder Path</label>
+    <input type="text" id="folderPath" placeholder="e.g. C:\Users\Nsama\Downloads" />
+
+    <button id="organiseBtn" onclick="organiseFiles()">Organise Files</button>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    async function organiseFiles() {
+      const path = document.getElementById("folderPath").value.trim();
+      const resultsDiv = document.getElementById("results");
+      const btn = document.getElementById("organiseBtn");
+
+      if (!path) {
+        resultsDiv.innerHTML = '<p class="error">Please enter a folder path.</p>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Organising...";
+      resultsDiv.innerHTML = "";
+
+      try {
+        const response = await fetch("/organise", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          resultsDiv.innerHTML = `<p class="error">${data.error}</p>`;
+          return;
+        }
+
+        const organised = data.organised || {};
+        const skipped = data.skipped || [];
+        const total = Object.values(organised).reduce((a, b) => a + b.length, 0);
+
+        let html = `<p class="summary">✅ ${total} file${total !== 1 ? "s" : ""} organised into ${Object.keys(organised).length} categor${Object.keys(organised).length !== 1 ? "ies" : "y"}.</p>`;
+
+        for (const [category, files] of Object.entries(organised)) {
+          html += `<div class="category">
+            <h3>📁 ${category} (${files.length})</h3>
+            <ul>${files.map(f => `<li>${f}</li>`).join("")}</ul>
+          </div>`;
+        }
+
+        if (skipped.length) {
+          html += `<p class="skipped">⚠️ ${skipped.length} file(s) skipped (no extension): ${skipped.join(", ")}</p>`;
+        }
+
+        resultsDiv.innerHTML = html;
+
+      } catch (err) {
+        resultsDiv.innerHTML = '<p class="error">Something went wrong. Is the server running?</p>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Organise Files";
+      }
+    }
+  </script>
+</body>
+</html>
